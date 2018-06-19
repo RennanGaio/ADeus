@@ -12,4 +12,6 @@ elif tam_pacote==2:
 else:
     true_tam=1500
 
-print true_tam
+X1 = (float(true_tam)*8)/2097152
+
+print X1
