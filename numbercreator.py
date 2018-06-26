@@ -20,10 +20,6 @@ tempo_servico_pacote_voz = tamanho_pacote_voz/2097152
 # Media da duracao do periodo de silencio dos pacotes de voz em segundos
 media_periodo_silencio = 0.650
 
-# Inverso da media /\
-# Definido aqui para economizar uma operacao de divisao toda vez que for necessario calcular o periodo de silencio
-inverso_media_periodo_silencio  = 1/media_periodo_silencio
-
 
 # Recebe ro e E[X]
 # Retorna lambda tal que lambda = ro / E[X]
@@ -40,7 +36,7 @@ def gera_tamanho_pacote_dados():
     print "--> Entrou em [gera_tamanho_pacote_dados]"
     # 0.3 de chance de indice=1, 0.1 de chance de indice=2, e assim por diante
     indice=numpy.random.choice(numpy.arange(1, 5), p=[0.3, 0.1, 0.3, 0.3])
-    print "indice: [" + str(indice) + "]"
+    print "\tindice: [" + str(indice) + "]"
     if indice==4:
         tamanho=numpy.random.randint(64,1500)
     elif indice==1:
@@ -49,7 +45,7 @@ def gera_tamanho_pacote_dados():
         tamanho=512
     else:
         tamanho=1500
-    print "tamanho: [" + str(tamanho) + "]"
+    print "\ttamanho: [" + str(tamanho) + "]"
     print "--> Saiu de [gera_tamanho_pacote_dados]"
     return tamanho
 
@@ -60,9 +56,18 @@ def gera_tempo_servico_pacote_dados():
     tamanho = gera_tamanho_pacote_dados()
     # Converte o tamanho de bytes para bits (multiplicando por 8), e divide por 2Mbps para obter o tempo de transmissao
     tempo_servico = float(tamanho*8)/2097152
-    print "tempo_servico: [" + str(tempo_servico) + "]"
+    print "\ttempo_servico: [" + str(tempo_servico) + "]"
     print "--> Saiu de [gera_tempo_servico_pacote_dados]"
     return tempo_servico
+
+# Retorna uma amostra aleatoria de uma chegada de um pacote de dados em segundos
+# (Amostra de uma variavel exponencial com taxa lamb = ro/E[X1])
+def gera_chegada_pacote_dados(lamb):
+    print "--> Entrou em [gera_chegada_pacote_dados]"
+    tempo_chegada = numpy.random.exponential(1/lamb)
+    print "\ttempo_chegada: [" + str(tempo_chegada) + "]"
+    print "--> Saiu de [gera_chegada_pacote_dados]"
+    return tempo_chegada
 
 # **************************************************************************
 # Funcoes dos pacotes de voz
@@ -75,7 +80,7 @@ def gera_tempo_servico_pacote_dados():
 def gera_numero_pacotes_voz():
     print "--> Entrou em [gera_numero_pacotes_voz]"
     numero_pacotes = numpy.random.geometric(float(1)/22)
-    print "numero_pacotes: [" + str(numero_pacotes) + "]"
+    print "\tnumero_pacotes: [" + str(numero_pacotes) + "]"
     print "--> Saiu de [gera_numero_pacotes_voz]"
     return numero_pacotes
 
@@ -84,7 +89,7 @@ def gera_numero_pacotes_voz():
 def calcula_duracao_periodo_atividade_voz(n_pacotes):
     print "--> Entrou em [calcula_duracao_periodo_atividade_voz]"
     duracao = (0.016)*n_pacotes
-    print "duracao: [" + str(duracao) + "]"
+    print "\tduracao: [" + str(duracao) + "]"
     print "--> Saiu de [calcula_duracao_periodo_atividade_voz]"
     return duracao
 
@@ -92,8 +97,8 @@ def calcula_duracao_periodo_atividade_voz(n_pacotes):
 # (Amostra de uma distribuicao exponencial com media de 650ms)
 def calcula_duracao_periodo_silencio_voz():
     print "--> Entrou em [calcula_duracao_periodo_silencio_voz]"
-    duracao = numpy.random.exponential(inverso_media_periodo_silencio)
-    print "duracao: [" + str(duracao) + "]"
+    duracao = numpy.random.exponential(media_periodo_silencio)
+    print "\tduracao: [" + str(duracao) + "]"
     print "--> Saiu de [calcula_duracao_periodo_silencio_voz]"
     return duracao
 
@@ -103,6 +108,9 @@ def calcula_duracao_periodo_silencio_voz():
 # **************************************************************************
 
 print "--> Iniciou programa principal"
+ro = 0.1
+tempo_chegada_dados = gera_chegada_pacote_dados(calcula_lambda(ro, EX1))
+print tempo_chegada_dados
 X1 = gera_tempo_servico_pacote_dados()
 print X1
 amostra_periodo_silencio = calcula_duracao_periodo_silencio_voz()
