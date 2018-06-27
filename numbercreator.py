@@ -1,9 +1,9 @@
 import random as rd
 import numpy.random
 
-# **************************************************************************
+# ********************************************************************
 # Declaracao de variaveis globais
-# **************************************************************************
+# ********************************************************************
 
 modo_debug = False
 
@@ -20,7 +20,7 @@ EX1 = (EL*8)/float(2097152)
 
 # ro1, utilizacao do sistema levando em conta apenas os pacotes de dados
 # ro1 = lambda1 * E[X1] -- ver descricao do trabalho
-ro1 = 0.7
+ro1 = 0.3
 
 # lambda1, taxa de chegada dos pacotes de dados
 lamb1 = calcula_lambda(ro1, EX1)
@@ -37,9 +37,9 @@ media_periodo_silencio = 0.650
 
 
 
-# **************************************************************************
+# ********************************************************************
 # Funcoes dos pacotes de dados
-# **************************************************************************
+# ********************************************************************
 
 # Retorna uma amostra aleatoria do tamanho em bytes de um pacote de dados
 # (Amostra da variavel aleatoria L - ver descricao do trabalho)
@@ -80,9 +80,9 @@ def gera_chegada_pacote_dados(lamb):
     if modo_debug: print "--> Saiu de [gera_chegada_pacote_dados]"
     return tempo_chegada
 
-# **************************************************************************
+# ********************************************************************
 # Funcoes dos pacotes de voz
-# **************************************************************************
+# ********************************************************************
 
 # def chegada_pacote_voz(intervalo_deterministico=0.016, tamanho_pacote=512):
 
@@ -113,9 +113,9 @@ def calcula_duracao_periodo_silencio_voz():
     if modo_debug: print "--> Saiu de [calcula_duracao_periodo_silencio_voz]"
     return duracao
 
-# **************************************************************************
+# ********************************************************************
 # Classes
-# **************************************************************************
+# ********************************************************************
 
 class pacote_dados:
     def __init__(self):
@@ -123,74 +123,72 @@ class pacote_dados:
         self.tamanho  = gera_tamanho_pacote_dados()
         self.tempo_servico = gera_tempo_servico_pacote_dados()
 
-class evento_chegada_pacote_dados:
-    def __init__(self):
-        self.pacote = pacote_dados()
+class evento_pacote_dados:       # Tipos: chegada, inicio_servico, fim_servico
+    def __init__(self, tipo, tempo, pacote):
+        self.tipo = tipo
+        self.tempo = tempo
+        self.pacote = pacote
 
-class evento_servico_pacote_dados:
-    def __init__(self, pct, t_inicio, t_termino):
-        self.pacote = pct
-        self.tempo_inicio = t_inicio
-        self.tempo_termino = t_termino
-
-# **************************************************************************
+# ********************************************************************
 # Programa principal
-# **************************************************************************
+# ********************************************************************
 
 if modo_debug: print "--> Iniciou programa principal"
 
-#tempo_chegada_dados = gera_chegada_pacote_dados(lamb)
-#print tempo_chegada_dados
-#X1 = gera_tempo_servico_pacote_dados()
-#print X1
-#amostra_periodo_silencio = calcula_duracao_periodo_silencio_voz()
-#print amostra_periodo_silencio
-#amostra_periodo_atividade = calcula_duracao_periodo_atividade_voz(gera_numero_pacotes_voz())
 
+# Numero de chegadas de pacotes de dados que serao geradas
+n = 99
 
+# CRIANDO OS PACOTES
+pacotes = []
+for i in range(0, n): pacotes.append(pacote_dados())
+# Ordena os pacotes por tempo de chegada
+pacotes = sorted(pacotes, key=lambda pacote: pacote.tempo_chegada)
 
-# CRIANDO CHEGADAS DE PACOTES DE DADOS
-lista_chegadas = []
-for i in range(0, 10):
-    lista_chegadas.append(evento_chegada_pacote_dados())
-lista_chegadas = sorted(lista_chegadas, key=lambda evento: evento.pacote.tempo_chegada)
-for i in lista_chegadas: print i.pacote.tempo_chegada
+# CRIANDO OS EVENTOS
+eventos = []
+quando_servidor_vai_liberar = 0
+for i in range(0, n):
+    # Cria o evento da chegada do pacote
+    t_chegada = pacotes[i].tempo_chegada
+    eventos.append(evento_pacote_dados("chegada", t_chegada, pacotes[i]))
+    if t_chegada > quando_servidor_vai_liberar:
+        # Se o servidor ja esta vazio (que ocorre quando esse pacote chega depois do servidor liberar)
+        quando_servidor_vai_liberar = t_chegada
+    # Cria o evento do pacote entrando no servico
+    t_entrada = quando_servidor_vai_liberar
+    eventos.append(evento_pacote_dados("inicio_servico", t_entrada, pacotes[i]))
+    # Cria o evento do pacote terminando o servico, que sera apos o seu tempo de servico
+    t_termino = t_entrada + pacotes[i].tempo_servico
+    eventos.append(evento_pacote_dados("fim_servico", t_termino, pacotes[i]))
+    # Registra o tempo em que o servidor estara liberado para o proximo pacote
+    quando_servidor_vai_liberar = t_termino
+# Ordena a lista de eventos por tempo de ocorrencia
+eventos = sorted(eventos, key=lambda evento: evento.tempo)
 
-print ""
+# SIMULANDO A FILA
+def printa_fila(t, capacidade, n_fila, n_servidor, rotulo):
+    linha = ""
+    asteriscos = ""
+    for j in range(0, capacidade-n_fila): linha += "_"
+    for j in range(0, n_fila): asteriscos += "x"
+    servidor = ""
+    if n_servidor==1: servidor = "x"
+    else: servidor = "_"
+    print "t = "+str(t)+"\t"+linha+asteriscos+"|"+servidor+" ("+rotulo+")"
 
-# CRIANDO SERVICOS DE PACOTES DE DADOS
-lista_servicos = []
-t = 0
-for chegada in lista_chegadas:
-    if len(lista_servicos) == 0:
-        lista_servicos.append(
-            evento_servico_pacote_dados(
-                chegada.pacote,
-                chegada.pacote.tempo_chegada,
-                chegada.pacote.tempo_chegada + chegada.pacote.tempo_servico
-            )
-        )
-        t = lista_servicos[0].tempo_termino
-    else:
-        if chegada.pacote.tempo_chegada <= t:
-            lista_servicos.append(
-                evento_servico_pacote_dados(
-                    chegada.pacote,
-                    t,
-                    t + chegada.pacote.tempo_servico
-                )
-            )
-            t = lista_servicos[len(lista_servicos)-1].tempo_termino
-        else:
-            lista_servicos.append(
-                evento_servico_pacote_dados(
-                    chegada.pacote,
-                    chegada.pacote.tempo_chegada,
-                    chegada.pacote.tempo_chegada + chegada.pacote.tempo_servico
-                )
-            )
-            t = lista_servicos[len(lista_servicos)-1].tempo_termino
-
-for i in lista_servicos: print str(i.tempo_inicio) + " --> " + str(i.tempo_termino)
+n_fila = 0
+n_servidor = 0
+for evento in eventos:
+    if evento.tipo == "chegada":
+        n_fila+=1
+        printa_fila(evento.tempo, n, n_fila, n_servidor, "chegada")
+    if evento.tipo == "inicio_servico":
+        n_fila-=1
+        n_servidor+=1
+        printa_fila(evento.tempo, n, n_fila, n_servidor, "inicio_servico")
+    if evento.tipo == "fim_servico":
+        n_servidor-=1
+        printa_fila(evento.tempo, n, n_fila, n_servidor, "fim_servico")
 
 if modo_debug: print "--> Terminou programa principal"
