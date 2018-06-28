@@ -144,6 +144,8 @@ pacotes = []
 for i in range(0, n): pacotes.append(pacote_dados())
 # Ordena os pacotes por tempo de chegada
 pacotes = sorted(pacotes, key=lambda pacote: pacote.tempo_chegada)
+# Determina que o primeiro pacote de dados ira chegar em t=0 -- ver descricao do trabalho
+pacotes[0].tempo_chegada = 0
 
 # CRIANDO OS EVENTOS
 eventos = []
