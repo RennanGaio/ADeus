@@ -6,6 +6,7 @@ import numpy.random
 # ********************************************************************
 
 modo_debug = False
+preempcao = True
 
 # Recebe ro e E[X]
 # Retorna lambda tal que lambda = ro / E[X]
@@ -274,14 +275,38 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
             servidor[0].tempo_entrou_em_servico = t
             # Oficialmente, um pacote de voz acaba de entrar no servidor.
             printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - servico")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
         else:
-            fila_voz.append(pacote_voz(t))
-            fim_fila_voz += 1
-            n_fila_voz += 1
-            # Oficialmente, um pacote de voz acaba de entrar na fila de voz.
-            printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - fila")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            # Se nao ha preempcao, o pacote de voz ira para a fila invaravelmente.
+            if preempcao == False:
+                fila_voz.append(pacote_voz(t))
+                fim_fila_voz += 1
+                n_fila_voz += 1
+                # Oficialmente, um pacote de voz acaba de entrar na fila de voz.
+                printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - fila")
+                printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            else:
+                # Se ha preempcao, vamos checar se devemos interromper um pacote de dados
+                if n_fila_voz == 0 and servidor[0].__class__ == pacote_dados:
+                    # Se o pacote que esta sendo servido eh um pacote de dados
+                    # Chuta ele do servidor
+                    inicio_fila_dados -= 1
+                    n_fila_dados += 1
+                    del servidor[0]
+                    servidor.append(pacote_voz(t))
+                    servidor[0].tempo_entrou_em_servico = t
+                    # Oficialmente, um pacote de voz acaba de entrar no servidor.
+                    printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - preempcao")
+                    printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+                else:
+                    fila_voz.append(pacote_voz(t))
+                    fim_fila_voz += 1
+                    n_fila_voz += 1
+                    # Oficialmente, um pacote de voz acaba de entrar na fila de voz.
+                    printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - fila")
+                    printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+                    print type(servidor[0])
+
         canais[indice_canal].quantos_pacotes_faltam_nesse_periodo_atividade -= 1
         
         # FALTA COISA AINDA: SE TEM QUE INTERROMPER UM PACOTE DE DADOS...
@@ -299,7 +324,7 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
             servidor[0].tempo_entrou_em_servico = t
             # Oficialmente, um pacote de dados acaba de entrar no servidor.
             printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - servico")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
         else:
             fila_dados.append(chegadas[n_pacotes_criados])
             n_pacotes_criados += 1
@@ -307,7 +332,7 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
             n_fila_dados += 1
             # Oficialmente, um pacote de dados acaba de entrar na fila de dados.
             printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - fila")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
 
     # Se o proximo evento eh o termino de um servico
     elif proximos_eventos[indice_prox_evento][1] == "servico":
@@ -324,7 +349,7 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
             servidor[0].tempo_entrou_em_servico = t
             # Oficialmente, um pacote de voz acaba de entrar em servico
             printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - servico")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
         # Verifica se tem pacotes de dados na fila de dados
         elif n_fila_dados > 0:
             # Coloca o proximo pacote de dados no servidor
@@ -335,11 +360,11 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
             servidor[0].tempo_entrou_em_servico = t
             # Oficialmente, um pacote de dados acaba de entrar em servico
             printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - servico")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
         else:
             # As duas filas estao vazias
             printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - vazia")
             printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - vazia")
-            # printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
 
 if modo_debug: print "--> Terminou programa principal"
