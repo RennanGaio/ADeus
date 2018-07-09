@@ -188,8 +188,11 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     "E[W2k]":0,
     "E[Nq2k]":0,
     "E[deltak]":0,
-    "V(deltak)":0
+    "V[deltak]":0
     }
+
+    #criacao de uma lista com tempos de intervalos entre pacotes de voz que sera usada para calcular V[deltak]
+    lista_intervalo_chegada_voz=[]
 
     # CRIACAO DE UM VETOR CONTENDO TODAS AS CHEGADAS QUE OCORRERAO DO FUTURO
     # Cria as chegadas de pacotes de dados que irao acontecer
@@ -256,7 +259,7 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
         canais[i].tempo_prox_chegada = calcula_duracao_periodo_silencio_voz()
 
     # Enquanto ainda ha pacotes de dados para chegar ou para servir
-    while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:        
+    while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:
         # Verifica se a fase transiente ja passou
         if fase_transiente == True and n_pacotes_criados >= n_pacotes_fase_transiente: fase_transiente = False
 
@@ -315,8 +318,9 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                 if fase_transiente == False:
                     n_pacotes_voz_criados_fora_da_fase_transiente += 1
                     if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
-                        # Atualiza o nosso E[deltak]
+                        # Atualiza o nosso E[deltak] e lista de intervalos
                         estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                        lista_intervalo_chegada_voz.append((t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote))
                         canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
                     if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
                     else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
@@ -342,8 +346,9 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                             # Atualiza o nosso E[X1k]
                             estatisticas["E[X1k]"] += (t - servidor[0].tempo_entrou_em_servico)
                             if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
-                                # Atualiza o nosso E[deltak]
+                                # Atualiza o nosso E[deltak] e lista de intervalos
                                 estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                                lista_intervalo_chegada_voz.append((t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote))
                                 canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
                             if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
                             else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
@@ -428,8 +433,9 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                     # Atualiza o nosso E[W2k]
                     estatisticas["E[W2k]"] += (servidor[0].tempo_entrou_em_servico - servidor[0].tempo_chegada)
                     if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
-                        # Atualiza o nosso E[deltak]
+                        # Atualiza o nosso E[deltak] e lista de intervalos
                         estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                        lista_intervalo_chegada_voz.append((t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote))
                         canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
                     if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
                     else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
@@ -464,7 +470,7 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
             estatisticas["E[Nq2k]"] += (n_fila_voz * delta_tempo)
 
     # Fim - while
-    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k], E[Nq2k] e E[deltak]
+    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k], E[Nq2k], E[deltak] e V[deltak]
     estatisticas["E[T1k]"] = estatisticas["E[T1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
     estatisticas["E[T2k]"] = estatisticas["E[T2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
     estatisticas["E[X1k]"] = estatisticas["E[X1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
@@ -475,6 +481,11 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     total_intervalos = 0
     for i in range(0, n_canais): total_intervalos += canais[i].numero_intervalos_entre_inicios_servico
     estatisticas["E[deltak]"] = estatisticas["E[deltak]"] / total_intervalos
+    #calculo final de V[deltak] usando o valor final de E[deltak] e a lista de intervalos entre chegadas
+    temp=0
+    for i in range(0, len(lista_intervalo_chegada_voz)):
+        temp+=(estatisticas["E[deltak]"]-lista_intervalo_chegada_voz[i])**2
+    estatisticas["V[deltak]"]=temp/(total_intervalos-1)
 
     return estatisticas
 
@@ -496,7 +507,7 @@ estatisticas_globais = {
     "E[W2]":0,
     "E[Nq2]":0,
     "E[delta]":0,
-    "V(delta)":0
+    "V[delta]":0
     }
 
 for i in range(0, numero_rodadas):
@@ -513,6 +524,7 @@ for i in range(0, numero_rodadas):
     print "E[W2k] ---------->  " + str(estatisticas_rodada["E[W2k]"])
     print "E[Nq2k]---------->  " + str(estatisticas_rodada["E[Nq2k]"])
     print "E[deltak]-------->  " + str(estatisticas_rodada["E[deltak]"])
+    print "V[deltak]-------->  " + str(estatisticas_rodada["V[deltak]"])
     print "~~~~~~~~~~~~~"
 
     # Atualiza as estatisticas globais
@@ -524,6 +536,7 @@ for i in range(0, numero_rodadas):
     estatisticas_globais["E[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
     estatisticas_globais["E[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
     estatisticas_globais["E[delta]"] += estatisticas_rodada["E[deltak]"]
+    estatisticas_globais["V[delta]"] += estatisticas_rodada["V[deltak]"]
 
 # Termina de calcular as estatisticas globais
 for chave in estatisticas_globais:
@@ -540,3 +553,4 @@ print "E[T2] ---------->  " + str(estatisticas_globais["E[T2]"])
 print "E[W2] ---------->  " + str(estatisticas_globais["E[W2]"])
 print "E[Nq2]---------->  " + str(estatisticas_globais["E[Nq2]"])
 print "E[delta]-------->  " + str(estatisticas_globais["E[delta]"])
+print "V[delta]-------->  " + str(estatisticas_globais["V[delta]"])
