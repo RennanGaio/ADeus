@@ -5,7 +5,7 @@ import numpy.random
 # Declaracao de variaveis globais
 # ********************************************************************
 
-preempcao = False
+preempcao = True
 modo_debug = False
 
 # Recebe ro e E[X]
@@ -21,7 +21,7 @@ EX1 = (EL*8)/float(2097152)
 
 # ro1, utilizacao do sistema levando em conta apenas os pacotes de dados
 # ro1 = lambda1 * E[X1] -- ver descricao do trabalho
-ro1 = 0.7
+ro1 = 0.1
 
 # lambda1, taxa de chegada dos pacotes de dados
 lamb1 = calcula_lambda(ro1, EX1)
@@ -114,6 +114,9 @@ class canal_voz:
         self.tempo_prox_chegada = 0
         self.esta_em_atividade = False
         self.quantos_pacotes_faltam_nesse_periodo_atividade = 0
+        # Os proximos dois campos sao usados para gerar as estatisticas E[delta] e V(delta) -- ver descricao do trabalho
+        self.tempo_inicio_servico_ultimo_pacote = -1 # Igual a -1 quando esse canal esta em silencio
+        self.numero_intervalos_entre_inicios_servico = 0 # Numero total de intervalos entre transmissoes que foram medidos
 
 class pacote_voz:
     def __init__(self, t_chegada):
@@ -306,9 +309,17 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
             # Verifica se o novo pacote devera entrar direto no servidor ou se tera que esperar na fila
             if n_servidor == 0:
                 servidor.append(pacote_voz(t))
-                if fase_transiente == False: n_pacotes_voz_criados_fora_da_fase_transiente += 1
                 n_servidor += 1
                 servidor[0].tempo_entrou_em_servico = t
+                # Verifica se deve gerar as estatisticas sobre esse pacote
+                if fase_transiente == False:
+                    n_pacotes_voz_criados_fora_da_fase_transiente += 1
+                    if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
+                        # Atualiza o nosso E[deltak]
+                        estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                        canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
+                    if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
+                    else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
                 # Oficialmente, um pacote de voz acaba de entrar no servidor.
                 printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - servico")
                 printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
@@ -326,10 +337,16 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                     # Se ha preempcao, vamos checar se devemos interromper um pacote de dados
                     if n_fila_voz == 0 and servidor[0].__class__ == pacote_dados:
                         # Se o pacote que esta sendo servido eh um pacote de dados
-                        # Verifica se deve gerar as estatisticas sobre o pacote que vai ser interrompido
+                        # Verifica se deve gerar as estatisticas sobre o pacote que vai ser interrompido e sobre o pacote que vai entrar em servico
                         if fase_transiente == False:
                             # Atualiza o nosso E[X1k]
                             estatisticas["E[X1k]"] += (t - servidor[0].tempo_entrou_em_servico)
+                            if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
+                                # Atualiza o nosso E[deltak]
+                                estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                                canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
+                            if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
+                            else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
                         # Chuta ele do servidor
                         inicio_fila_dados -= 1
                         n_fila_dados += 1
@@ -410,6 +427,12 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                 if fase_transiente == False:
                     # Atualiza o nosso E[W2k]
                     estatisticas["E[W2k]"] += (servidor[0].tempo_entrou_em_servico - servidor[0].tempo_chegada)
+                    if canais[indice_canal].tempo_inicio_servico_ultimo_pacote != -1:
+                        # Atualiza o nosso E[deltak]
+                        estatisticas["E[deltak]"] += (t - canais[indice_canal].tempo_inicio_servico_ultimo_pacote)
+                        canais[indice_canal].numero_intervalos_entre_inicios_servico += 1
+                    if canais[indice_canal].esta_em_atividade: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = t
+                    else: canais[indice_canal].tempo_inicio_servico_ultimo_pacote = -1
                 # Oficialmente, um pacote de voz acaba de entrar em servico
                 printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - servico")
                 printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
@@ -441,7 +464,7 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
             estatisticas["E[Nq2k]"] += (n_fila_voz * delta_tempo)
 
     # Fim - while
-    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k] e E[Nq2k]
+    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k], E[Nq2k] e E[deltak]
     estatisticas["E[T1k]"] = estatisticas["E[T1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
     estatisticas["E[T2k]"] = estatisticas["E[T2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
     estatisticas["E[X1k]"] = estatisticas["E[X1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
@@ -449,6 +472,9 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     estatisticas["E[W2k]"] = estatisticas["E[W2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
     estatisticas["E[Nq1k]"] = estatisticas["E[Nq1k]"] / t
     estatisticas["E[Nq2k]"] = estatisticas["E[Nq2k]"] / t
+    total_intervalos = 0
+    for i in range(0, n_canais): total_intervalos += canais[i].numero_intervalos_entre_inicios_servico
+    estatisticas["E[deltak]"] = estatisticas["E[deltak]"] / total_intervalos
 
     return estatisticas
 
@@ -457,8 +483,8 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
 # ********************************************************************
 
 numero_rodadas = 3
-numero_fregueses = 1000
-fase_transiente = 200
+numero_fregueses = 10000
+fase_transiente = 2000
 
 # Estatisticas globais sao as que dizem respeito a todas as rodadas de simulacao
 estatisticas_globais = {
@@ -486,6 +512,7 @@ for i in range(0, numero_rodadas):
     print "E[X2k] ---------->  " + str(tempo_servico_pacote_voz)
     print "E[W2k] ---------->  " + str(estatisticas_rodada["E[W2k]"])
     print "E[Nq2k]---------->  " + str(estatisticas_rodada["E[Nq2k]"])
+    print "E[deltak]-------->  " + str(estatisticas_rodada["E[deltak]"])
     print "~~~~~~~~~~~~~"
 
     # Atualiza as estatisticas globais
@@ -496,11 +523,20 @@ for i in range(0, numero_rodadas):
     estatisticas_globais["E[W2]"] += estatisticas_rodada["E[W2k]"]
     estatisticas_globais["E[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
     estatisticas_globais["E[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
+    estatisticas_globais["E[delta]"] += estatisticas_rodada["E[deltak]"]
 
 # Termina de calcular as estatisticas globais
 for chave in estatisticas_globais:
     estatisticas_globais[chave] = estatisticas_globais[chave] / numero_rodadas
 
 print "ESTATISTICAS GLOBAIS:"
-for chave in estatisticas_globais:
-    print chave + " ---------->  " + str(estatisticas_globais[chave])
+print "grupo 1:"
+print "E[T1] ---------->  " + str(estatisticas_globais["E[T1]"])
+print "E[X1] ---------->  " + str(estatisticas_globais["E[X1]"])
+print "E[W1] ---------->  " + str(estatisticas_globais["E[W1]"])
+print "E[Nq1]---------->  " + str(estatisticas_globais["E[Nq1]"])
+print "grupo 2:"
+print "E[T2] ---------->  " + str(estatisticas_globais["E[T2]"])
+print "E[W2] ---------->  " + str(estatisticas_globais["E[W2]"])
+print "E[Nq2]---------->  " + str(estatisticas_globais["E[Nq2]"])
+print "E[delta]-------->  " + str(estatisticas_globais["E[delta]"])
