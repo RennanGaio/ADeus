@@ -5,7 +5,7 @@ import numpy.random
 # Declaracao de variaveis globais
 # ********************************************************************
 
-preempcao = True
+preempcao = False
 modo_debug = False
 
 # Recebe ro e E[X]
@@ -204,6 +204,8 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     n_canais = 30
     # Tempo passado (em segundos)
     t = 0
+    # Tempo que ocorreu a ultima iteracao do simulador. Usado para calcular E[Nq1] e E[Nq2] pelo metodo das areas
+    t_anterior = 0
     # Numero de pacotes de dados ja criados. Usado para conhecer o progresso da simulacao
     n_pacotes_criados = 0
     # Numero de pacotes de voz criados fora da fase transiente
@@ -274,6 +276,7 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                 indice_prox_evento = i
 
         # Atualiza o contador do tempo
+        t_anterior = t
         t = tempo_prox_evento
 
         # Se o proximo evento eh a chegada de um pacote de voz
@@ -431,13 +434,21 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                 printa_fila(t, 20, n_fila_voz, n_servidor, "VOZ - vazia")
                 printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
 
+        # Atualiza os nossos E[Nq1k] e E[Nq2k] pelo metodo das areas
+        if fase_transiente == False:
+            delta_tempo = t - t_anterior
+            estatisticas["E[Nq1k]"] += (n_fila_dados * delta_tempo)
+            estatisticas["E[Nq2k]"] += (n_fila_voz * delta_tempo)
+
     # Fim - while
-    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k]
+    # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k] e E[Nq2k]
     estatisticas["E[T1k]"] = estatisticas["E[T1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
     estatisticas["E[T2k]"] = estatisticas["E[T2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
     estatisticas["E[X1k]"] = estatisticas["E[X1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
     estatisticas["E[W1k]"] = estatisticas["E[W1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
     estatisticas["E[W2k]"] = estatisticas["E[W2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
+    estatisticas["E[Nq1k]"] = estatisticas["E[Nq1k]"] / t
+    estatisticas["E[Nq2k]"] = estatisticas["E[Nq2k]"] / t
 
     return estatisticas
 
@@ -469,10 +480,12 @@ for i in range(0, numero_rodadas):
     print "E[T1k] ---------->  " + str(estatisticas_rodada["E[T1k]"])
     print "E[X1k] ---------->  " + str(estatisticas_rodada["E[X1k]"])
     print "E[W1k] ---------->  " + str(estatisticas_rodada["E[W1k]"])
+    print "E[Nq1k]---------->  " + str(estatisticas_rodada["E[Nq1k]"])
     print "grupo 2:"
     print "E[T2k] ---------->  " + str(estatisticas_rodada["E[T2k]"])
     print "E[X2k] ---------->  " + str(tempo_servico_pacote_voz)
     print "E[W2k] ---------->  " + str(estatisticas_rodada["E[W2k]"])
+    print "E[Nq2k]---------->  " + str(estatisticas_rodada["E[Nq2k]"])
     print "~~~~~~~~~~~~~"
 
     # Atualiza as estatisticas globais
@@ -481,6 +494,8 @@ for i in range(0, numero_rodadas):
     estatisticas_globais["E[X1]"] += estatisticas_rodada["E[X1k]"]
     estatisticas_globais["E[T2]"] += estatisticas_rodada["E[T2k]"]
     estatisticas_globais["E[W2]"] += estatisticas_rodada["E[W2k]"]
+    estatisticas_globais["E[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
+    estatisticas_globais["E[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
 
 # Termina de calcular as estatisticas globais
 for chave in estatisticas_globais:
