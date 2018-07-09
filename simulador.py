@@ -6,7 +6,7 @@ import numpy.random
 # ********************************************************************
 
 modo_debug = False
-preempcao = True
+preempcao = False
 
 # Recebe ro e E[X]
 # Retorna lambda tal que lambda = ro / E[X]
@@ -223,7 +223,7 @@ for i in range(0, n_canais):
 # Enquanto ainda ha pacotes de dados para chegar ou para servir
 while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:
 
-    raw_input ("Press enter to continue...")
+    # raw_input ("Press enter to continue...")
 
     # Descobre qual eh o proximo evento que deve ser tratado
     # Se o menor tempo eh o termino do servico de algum pacote do servidor, ou o tempo de alguma chegada
@@ -267,7 +267,8 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
                 # Se o periodo de atividade desse canal acaba de terminar
                 canais[indice_canal].esta_em_atividade = False
                 # Gera o periodo de silencio desse canal
-                canais[indice_canal].tempo_prox_chegada = t + calcula_duracao_periodo_silencio_voz()
+                # O periodo de silencio somente se inicia 16ms apos a chegada do ultimo pacote do periodo de atividade
+                canais[indice_canal].tempo_prox_chegada = t + calcula_duracao_periodo_silencio_voz() + intervalo_entre_pacotes_voz
         # Verifica se o novo pacote devera entrar direto no servidor ou se tera que esperar na fila
         if n_servidor == 0:
             servidor.append(pacote_voz(t))
@@ -308,8 +309,6 @@ while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados 
                     print type(servidor[0])
 
         canais[indice_canal].quantos_pacotes_faltam_nesse_periodo_atividade -= 1
-        
-        # FALTA COISA AINDA: SE TEM QUE INTERROMPER UM PACOTE DE DADOS...
 
     # Se o proximo evento eh a chegada de um pacote de dados
     elif proximos_eventos[indice_prox_evento][1] == "pacote_dados":
