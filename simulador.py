@@ -1,5 +1,7 @@
 import random as rd
 import numpy.random
+from scipy import stats
+import math
 
 # ********************************************************************
 # Declaracao de variaveis globais
@@ -493,11 +495,125 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
 # Programa principal
 # ********************************************************************
 
-numero_rodadas = 3
-numero_fregueses = 10000
-fase_transiente = 2000
+numero_rodadas = 10
+numero_fregueses = 1000
+fase_transiente = 200
+
+# Calculo incremental do desvio padrao utilizado:
+# desvio padrao = somatorio{amostra**2}/(n-1) - (somatorio{amostra}**2)/n*(n-1)
+#                primeiro termo /\                   segundo termo /\
+
+# Dicionarios que irao guardar os valores correntes dos somatorios descritos acima
+somatorio_primeiro_termo_desvio_padrao = {
+    "V[T1]":0,
+    "V[W1]":0,
+    "V[X1]":0,
+    "V[Nq1]":0,
+    "V[T2]":0,
+    "V[W2]":0,
+    "V[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+somatorio_segundo_termo_desvio_padrao = {
+    "V[T1]":0,
+    "V[W1]":0,
+    "V[X1]":0,
+    "V[Nq1]":0,
+    "V[T2]":0,
+    "V[W2]":0,
+    "V[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+# Dicionario que ira guardar o primeiro termo do calculo do desvio padrao das estatisticas, para o calculo dos ICs
+primeiro_termo_desvio_padrao = {
+    "V[T1]":0,
+    "V[W1]":0,
+    "V[X1]":0,
+    "V[Nq1]":0,
+    "V[T2]":0,
+    "V[W2]":0,
+    "V[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+# Dicionario que ira guardar o segundo termo do calculo do desvio padrao das estatisticas, para o calculo dos ICs
+segundo_termo_desvio_padrao = {
+    "V[T1]":0,
+    "V[W1]":0,
+    "V[X1]":0,
+    "V[Nq1]":0,
+    "V[T2]":0,
+    "V[W2]":0,
+    "V[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+# Dicionario que ira guardar o desvio padrao das estatisticas, para o calculo dos ICs
+desvio_padrao = {
+    "V[T1]":0,
+    "V[W1]":0,
+    "V[X1]":0,
+    "V[Nq1]":0,
+    "V[T2]":0,
+    "V[W2]":0,
+    "V[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+# Dicionarios que irao guardar os limites inferior e superior dos ICs
+IC_limite_inferior = {
+    "E[T1]":0,
+    "E[W1]":0,
+    "E[X1]":0,
+    "E[Nq1]":0,
+    "E[T2]":0,
+    "E[W2]":0,
+    "E[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+IC_limite_superior = {
+    "E[T1]":0,
+    "E[W1]":0,
+    "E[X1]":0,
+    "E[Nq1]":0,
+    "E[T2]":0,
+    "E[W2]":0,
+    "E[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+}
+
+# Dicionario que guarda a proporcao entre a largura e o ponto medio de cada IC
+proporcoes = {
+    "E[T1]":0,
+    "E[W1]":0,
+    "E[X1]":0,
+    "E[Nq1]":0,
+    "E[T2]":0,
+    "E[W2]":0,
+    "E[Nq2]":0
+}
 
 # Estatisticas globais sao as que dizem respeito a todas as rodadas de simulacao
+somatorio_estatisticas_globais = {
+    "E[T1]":0,
+    "E[W1]":0,
+    "E[X1]":0,
+    "E[Nq1]":0,
+    "E[T2]":0,
+    "E[W2]":0,
+    "E[Nq2]":0,
+    "E[delta]":0,
+    "V[delta]":0
+    }
 estatisticas_globais = {
     "E[T1]":0,
     "E[W1]":0,
@@ -510,9 +626,13 @@ estatisticas_globais = {
     "V[delta]":0
     }
 
-for i in range(0, numero_rodadas):
+termino = False
+i = 1
+um_menos_alfa_sobre_dois = 0.95 # O nosso alfa vale 0.1, pois o IC deve ter precisao de 90%
+while termino == False:
     # Executa uma rodada de simulacao
     estatisticas_rodada = simulacao(numero_fregueses, fase_transiente)
+    print "RODADA: [" + str(i) + "]"
     print "grupo 1:"
     print "E[T1k] ---------->  " + str(estatisticas_rodada["E[T1k]"])
     print "E[X1k] ---------->  " + str(estatisticas_rodada["E[X1k]"])
@@ -528,29 +648,138 @@ for i in range(0, numero_rodadas):
     print "~~~~~~~~~~~~~"
 
     # Atualiza as estatisticas globais
-    estatisticas_globais["E[T1]"] += estatisticas_rodada["E[T1k]"]
-    estatisticas_globais["E[W1]"] += estatisticas_rodada["E[W1k]"]
-    estatisticas_globais["E[X1]"] += estatisticas_rodada["E[X1k]"]
-    estatisticas_globais["E[T2]"] += estatisticas_rodada["E[T2k]"]
-    estatisticas_globais["E[W2]"] += estatisticas_rodada["E[W2k]"]
-    estatisticas_globais["E[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
-    estatisticas_globais["E[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
-    estatisticas_globais["E[delta]"] += estatisticas_rodada["E[deltak]"]
-    estatisticas_globais["V[delta]"] += estatisticas_rodada["V[deltak]"]
+    somatorio_estatisticas_globais["E[T1]"] += estatisticas_rodada["E[T1k]"]
+    somatorio_estatisticas_globais["E[W1]"] += estatisticas_rodada["E[W1k]"]
+    somatorio_estatisticas_globais["E[X1]"] += estatisticas_rodada["E[X1k]"]
+    somatorio_estatisticas_globais["E[T2]"] += estatisticas_rodada["E[T2k]"]
+    somatorio_estatisticas_globais["E[W2]"] += estatisticas_rodada["E[W2k]"]
+    somatorio_estatisticas_globais["E[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
+    somatorio_estatisticas_globais["E[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
+    somatorio_estatisticas_globais["E[delta]"] += estatisticas_rodada["E[deltak]"]
+    somatorio_estatisticas_globais["V[delta]"] += estatisticas_rodada["V[deltak]"]
 
-# Termina de calcular as estatisticas globais
-for chave in estatisticas_globais:
-    estatisticas_globais[chave] = estatisticas_globais[chave] / numero_rodadas
+    # Atualiza o calculo do desvio padrao das estatisticas
+    somatorio_primeiro_termo_desvio_padrao["V[T1]"] += (estatisticas_rodada["E[T1k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[T1]"] += estatisticas_rodada["E[T1k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[W1]"] += (estatisticas_rodada["E[W1k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[W1]"] += estatisticas_rodada["E[W1k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[X1]"] += (estatisticas_rodada["E[X1k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[X1]"] += estatisticas_rodada["E[X1k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[Nq1]"] += (estatisticas_rodada["E[Nq1k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[Nq1]"] += estatisticas_rodada["E[Nq1k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[T2]"] += (estatisticas_rodada["E[T2k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[T2]"] += estatisticas_rodada["E[T2k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[W2]"] += (estatisticas_rodada["E[W2k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[W2]"] += estatisticas_rodada["E[W2k]"]
+    somatorio_primeiro_termo_desvio_padrao["V[Nq2]"] += (estatisticas_rodada["E[Nq2k]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[Nq2]"] += estatisticas_rodada["E[Nq2k]"]
+    somatorio_primeiro_termo_desvio_padrao["E[delta]"] += (estatisticas_rodada["E[deltak]"])**2
+    somatorio_segundo_termo_desvio_padrao["E[delta]"] += estatisticas_rodada["E[deltak]"]
+    somatorio_primeiro_termo_desvio_padrao["V[delta]"] += (estatisticas_rodada["V[deltak]"])**2
+    somatorio_segundo_termo_desvio_padrao["V[delta]"] += estatisticas_rodada["V[deltak]"]
 
-print "ESTATISTICAS GLOBAIS:"
-print "grupo 1:"
-print "E[T1] ---------->  " + str(estatisticas_globais["E[T1]"])
-print "E[X1] ---------->  " + str(estatisticas_globais["E[X1]"])
-print "E[W1] ---------->  " + str(estatisticas_globais["E[W1]"])
-print "E[Nq1]---------->  " + str(estatisticas_globais["E[Nq1]"])
-print "grupo 2:"
-print "E[T2] ---------->  " + str(estatisticas_globais["E[T2]"])
-print "E[W2] ---------->  " + str(estatisticas_globais["E[W2]"])
-print "E[Nq2]---------->  " + str(estatisticas_globais["E[Nq2]"])
-print "E[delta]-------->  " + str(estatisticas_globais["E[delta]"])
-print "V[delta]-------->  " + str(estatisticas_globais["V[delta]"])
+    # Caso tenha atingido o numero desejado de rodadas, comeca a calcular os ICs e a medir a qualidade das simulacoes
+    # Se determinar que a qualidade ainda nao esta boa, continua a executar
+    if (i >= numero_rodadas):
+        # Para verificar se ja pode parar de executar as rodadas, termina o calculo dos ICs
+
+        # Variaveis para economizar tempo
+        raiz_i = math.sqrt(i)
+        i_vezes_i_menos_um = i * (i - 1)
+
+        # Termina o calculo do desvio padrao das estatisticas
+        for chave in primeiro_termo_desvio_padrao:
+            primeiro_termo_desvio_padrao[chave] = somatorio_primeiro_termo_desvio_padrao[chave] / (i-1)
+            segundo_termo_desvio_padrao[chave] = ((somatorio_segundo_termo_desvio_padrao[chave])**2) / (i_vezes_i_menos_um)
+            desvio_padrao[chave] = math.sqrt(primeiro_termo_desvio_padrao[chave] - segundo_termo_desvio_padrao[chave])
+
+        # Termina de calcular as estatisticas globais
+        for chave in estatisticas_globais:
+            estatisticas_globais[chave] = somatorio_estatisticas_globais[chave] / i
+
+        print "ESTATISTICAS GLOBAIS:"
+        print "grupo 1:"
+        print "E[T1] ---------->  " + str(estatisticas_globais["E[T1]"])
+        print "E[X1] ---------->  " + str(estatisticas_globais["E[X1]"])
+        print "E[W1] ---------->  " + str(estatisticas_globais["E[W1]"])
+        print "E[Nq1]---------->  " + str(estatisticas_globais["E[Nq1]"])
+        print "grupo 2:"
+        print "E[T2] ---------->  " + str(estatisticas_globais["E[T2]"])
+        print "E[W2] ---------->  " + str(estatisticas_globais["E[W2]"])
+        print "E[Nq2]---------->  " + str(estatisticas_globais["E[Nq2]"])
+        print "E[delta]-------->  " + str(estatisticas_globais["E[delta]"])
+        print "V[delta]-------->  " + str(estatisticas_globais["V[delta]"])
+        # print "######################"
+        # print "DESVIO PADRAO:"
+        # print "grupo 1:"
+        # print "T1 ------------->  " + str(desvio_padrao["V[T1]"])
+        # print "X1 ------------->  " + str(desvio_padrao["V[X1]"])
+        # print "W1 ------------->  " + str(desvio_padrao["V[W1]"])
+        # print "Nq1 ------------>  " + str(desvio_padrao["V[Nq1]"])
+        # print "grupo 2:"
+        # print "T2 ------------->  " + str(desvio_padrao["V[T2]"])
+        # print "W2 ------------->  " + str(desvio_padrao["V[W2]"])
+        # print "Nq2 ------------>  " + str(desvio_padrao["V[Nq2]"])
+
+        # Calculo dos limites do IC
+        percentil = stats.t.ppf(um_menos_alfa_sobre_dois, i-1)
+        IC_limite_inferior["E[T1]"] = estatisticas_globais["E[T1]"] - percentil * desvio_padrao["V[T1]"] / raiz_i
+        IC_limite_superior["E[T1]"] = estatisticas_globais["E[T1]"] + percentil * desvio_padrao["V[T1]"] / raiz_i
+        IC_limite_inferior["E[X1]"] = estatisticas_globais["E[X1]"] - percentil * desvio_padrao["V[X1]"] / raiz_i
+        IC_limite_superior["E[X1]"] = estatisticas_globais["E[X1]"] + percentil * desvio_padrao["V[X1]"] / raiz_i
+        IC_limite_inferior["E[W1]"] = estatisticas_globais["E[W1]"] - percentil * desvio_padrao["V[W1]"] / raiz_i
+        IC_limite_superior["E[W1]"] = estatisticas_globais["E[W1]"] + percentil * desvio_padrao["V[W1]"] / raiz_i
+        IC_limite_inferior["E[Nq1]"] = estatisticas_globais["E[Nq1]"] - percentil * desvio_padrao["V[Nq1]"] / raiz_i
+        IC_limite_superior["E[Nq1]"] = estatisticas_globais["E[Nq1]"] + percentil * desvio_padrao["V[Nq1]"] / raiz_i
+        IC_limite_inferior["E[T2]"] = estatisticas_globais["E[T2]"] - percentil * desvio_padrao["V[T2]"] / raiz_i
+        IC_limite_superior["E[T2]"] = estatisticas_globais["E[T2]"] + percentil * desvio_padrao["V[T2]"] / raiz_i
+        IC_limite_inferior["E[W2]"] = estatisticas_globais["E[W2]"] - percentil * desvio_padrao["V[W2]"] / raiz_i
+        IC_limite_superior["E[W2]"] = estatisticas_globais["E[W2]"] + percentil * desvio_padrao["V[W2]"] / raiz_i
+        IC_limite_inferior["E[Nq2]"] = estatisticas_globais["E[Nq2]"] - percentil * desvio_padrao["V[Nq2]"] / raiz_i
+        IC_limite_superior["E[Nq2]"] = estatisticas_globais["E[Nq2]"] + percentil * desvio_padrao["V[Nq2]"] / raiz_i
+        IC_limite_inferior["E[delta]"] = estatisticas_globais["E[delta]"] - percentil * desvio_padrao["E[delta]"] / raiz_i
+        IC_limite_superior["E[delta]"] = estatisticas_globais["E[delta]"] + percentil * desvio_padrao["E[delta]"] / raiz_i
+        IC_limite_inferior["V[delta]"] = estatisticas_globais["V[delta]"] - percentil * desvio_padrao["V[delta]"] / raiz_i
+        IC_limite_superior["V[delta]"] = estatisticas_globais["V[delta]"] + percentil * desvio_padrao["V[delta]"] / raiz_i
+
+
+        # Calcula a proporcao entre o ponto medio e a largura dos ICs
+        chaves = {}
+        if preempcao == False:
+            chaves = {"E[T1]", "E[X1]", "E[W1]", "E[Nq1]", "E[T2]", "E[W2]", "E[Nq2]"}
+        else:
+            chaves = {"E[T2]", "E[W2]", "E[Nq2]"}
+
+        numero_proporcoes_ok = 0
+        for chave in chaves:
+            proporcoes[chave] = ((IC_limite_superior[chave] - IC_limite_inferior[chave]) / estatisticas_globais[chave])
+            if proporcoes[chave] < 0.1: numero_proporcoes_ok += 1
+
+        print "#########################"
+        print "ICs:"
+        print "grupo 1:"
+        print "T1: (" + str(IC_limite_inferior["E[T1]"]) + ", " + str(IC_limite_superior["E[T1]"]) + "). Largura: [" + str(IC_limite_superior["E[T1]"] - IC_limite_inferior["E[T1]"]) + "]"
+        if preempcao == False: print "proporcao: [" + str(proporcoes["E[T1]"] * 100) + "%]"
+        print "X1: (" + str(IC_limite_inferior["E[X1]"]) + ", " + str(IC_limite_superior["E[X1]"]) + "). Largura: [" + str(IC_limite_superior["E[X1]"] - IC_limite_inferior["E[X1]"]) + "]"
+        if preempcao == False: print "proporcao: [" + str(proporcoes["E[X1]"] * 100) + "%]"
+        print "W1: (" + str(IC_limite_inferior["E[W1]"]) + ", " + str(IC_limite_superior["E[W1]"]) + "). Largura: [" + str(IC_limite_superior["E[W1]"] - IC_limite_inferior["E[W1]"]) + "]"
+        if preempcao == False: print "proporcao: [" + str(proporcoes["E[W1]"] * 100) + "%]"
+        print "Nq1:(" + str(IC_limite_inferior["E[Nq1]"]) + ", " + str(IC_limite_superior["E[Nq1]"]) + "). Largura: [" + str(IC_limite_superior["E[Nq1]"] - IC_limite_inferior["E[Nq1]"]) + "]"
+        if preempcao == False: print "proporcao: [" + str(proporcoes["E[Nq1]"] * 100) + "%]"
+        print "grupo 2:"
+        print "T2: (" + str(IC_limite_inferior["E[T2]"]) + ", " + str(IC_limite_superior["E[T2]"]) + "). Largura: [" + str(IC_limite_superior["E[T2]"] - IC_limite_inferior["E[T2]"]) + "]"
+        print "proporcao: [" + str(proporcoes["E[T2]"] * 100) + "%]"
+        print "W2: (" + str(IC_limite_inferior["E[W2]"]) + ", " + str(IC_limite_superior["E[W2]"]) + "). Largura: [" + str(IC_limite_superior["E[W2]"] - IC_limite_inferior["E[W2]"]) + "]"
+        print "proporcao: [" + str(proporcoes["E[W2]"] * 100) + "%]"
+        print "Nq2:(" + str(IC_limite_inferior["E[Nq2]"]) + ", " + str(IC_limite_superior["E[Nq2]"]) + "). Largura: [" + str(IC_limite_superior["E[Nq2]"] - IC_limite_inferior["E[Nq2]"]) + "]"
+        print "proporcao: [" + str(proporcoes["E[Nq2]"] * 100) + "%]"
+        print "E[delta]:(" + str(IC_limite_inferior["E[delta]"]) + ", " + str(IC_limite_superior["E[delta]"]) + "). Largura: [" + str(IC_limite_superior["E[delta]"] - IC_limite_inferior["E[delta]"]) + "]"
+        print "V[delta]:(" + str(IC_limite_inferior["V[delta]"]) + ", " + str(IC_limite_superior["V[delta]"]) + "). Largura: [" + str(IC_limite_superior["V[delta]"] - IC_limite_inferior["V[delta]"]) + "]"
+        print "Numero de rodadas: " + str(i)
+
+        if numero_proporcoes_ok == len(chaves):
+            print "#########################"
+            print "ACABOU"
+            exit()
+
+    i += 1
