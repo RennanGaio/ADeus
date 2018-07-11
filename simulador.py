@@ -196,15 +196,10 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     #criacao de uma lista com tempos de intervalos entre pacotes de voz que sera usada para calcular V[deltak]
     lista_intervalo_chegada_voz=[]
 
-    # CRIACAO DE UM VETOR CONTENDO TODAS AS CHEGADAS QUE OCORRERAO DO FUTURO
-    # Cria as chegadas de pacotes de dados que irao acontecer
+    # Vetor que ira armazenar as chegadas dos pacotes de dados. Uma chegada por vez sera gerada
+    # Cria a chegada do primeiro pacote, que ocorre em t=0 -- ver descricao do trabalho
     chegadas = []
-    t = 0
-    for i in range(0, total_pacotes_dados):
-        chegadas.append(pacote_dados())
-        chegadas[i].tempo_chegada = t + gera_chegada_pacote_dados(lamb1)
-        t = chegadas[i].tempo_chegada
-    # Determina que a chegada do primeiro pacote ocorre em t=0 -- ver descricao do trabalho
+    chegadas.append(pacote_dados())
     chegadas[0].tempo_chegada = 0
 
     # SIMULACAO DAS FILAS
@@ -214,8 +209,10 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     t = 0
     # Tempo que ocorreu a ultima iteracao do simulador. Usado para calcular E[Nq1] e E[Nq2] pelo metodo das areas
     t_anterior = 0
-    # Numero de pacotes de dados ja criados. Usado para conhecer o progresso da simulacao
-    n_pacotes_criados = 0
+    # Numero de pacotes de dados ja criados. Usado para conhecer o progresso da rodada
+    n_pacotes_dados_criados = 1
+    # Numero de pacotes de dados criados fora da fase transiente
+    n_pacotes_dados_criados_fora_da_fase_transiente = 0
     # Numero de pacotes de voz criados fora da fase transiente
     n_pacotes_voz_criados_fora_da_fase_transiente = 0
     # Ponteiros para o inicio e fim das filas
@@ -240,13 +237,13 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
     # Fase transiente
     fase_transiente = True
 
-    # Gera a chegada do primeiro pacote de dados
+    # Insere na fila o primeiro pacote de dados
     # Como o sistema acaba de abrir, esse pacote ira passar direto pela fila e ira para o servidor
     # Mas, mesmo assim, precisa primeiro inserir ele na fila, pois ele pode ser interrompido e ter que voltar pra fila
-    fila_dados.append(chegadas[n_pacotes_criados])
+    fila_dados.append(chegadas[n_pacotes_dados_criados-1])
     fim_fila_dados += 1 # Entrou na fila
     fila_dados[fim_fila_dados].tempo_entrou_na_fila = t
-    n_pacotes_criados += 1
+    # n_pacotes_dados_criados += 1
     servidor.append(fila_dados[inicio_fila_dados])
     inicio_fila_dados += 1 # Saiu da fila e entrou no servidor
     n_servidor += 1
@@ -261,9 +258,9 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
         canais[i].tempo_prox_chegada = calcula_duracao_periodo_silencio_voz()
 
     # Enquanto ainda ha pacotes de dados para chegar ou para servir
-    while n_pacotes_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:
+    while n_pacotes_dados_criados < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:
         # Verifica se a fase transiente ja passou
-        if fase_transiente == True and n_pacotes_criados >= n_pacotes_fase_transiente: fase_transiente = False
+        if fase_transiente == True and n_pacotes_dados_criados >= n_pacotes_fase_transiente: fase_transiente = False
 
         # raw_input ("Press enter to continue...")
 
@@ -273,7 +270,7 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
         # Pega o tempo das proximas chegadas de pacotes de voz
         for i in range(0, n_canais): proximos_eventos.append([canais[i].tempo_prox_chegada, "pacote_voz", i])
         # Pega o tempo da proxima chegada de pacote de dados
-        if n_pacotes_criados < total_pacotes_dados: proximos_eventos.append([chegadas[n_pacotes_criados].tempo_chegada, "pacote_dados"])
+        if n_pacotes_dados_criados < total_pacotes_dados: proximos_eventos.append([chegadas[n_pacotes_dados_criados-1].tempo_chegada, "pacote_dados"])
         # Pega o tempo de termino do servico do pacote que esta no servidor
         if n_servidor > 0: proximos_eventos.append([servidor[0].tempo_entrou_em_servico + servidor[0].tempo_servico, "servico"])
         # Descobre o tempo que ocorrera o proximo evento
@@ -382,19 +379,19 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
         elif proximos_eventos[indice_prox_evento][1] == "pacote_dados":
             # Verifica se o novo pacote devera entrar direto no servidor ou se tera que esperar na fila
             if n_servidor == 0:
-                fila_dados.append(chegadas[n_pacotes_criados])
+                fila_dados.append(chegadas[n_pacotes_dados_criados-1])
                 fim_fila_dados += 1 # Inserindo o pacote na fila mesmo assim, pois ele pode ser interrompido e ter que voltar pra fila
-                servidor.append(chegadas[n_pacotes_criados])
+                servidor.append(chegadas[n_pacotes_dados_criados-1])
                 inicio_fila_dados += 1 # Agora, tirando da fila e pondo no servidor
-                n_pacotes_criados += 1
+                # n_pacotes_dados_criados += 1
                 n_servidor += 1
                 servidor[0].tempo_entrou_em_servico = t
                 # Oficialmente, um pacote de dados acaba de entrar no servidor.
                 printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - servico")
                 printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
             else:
-                fila_dados.append(chegadas[n_pacotes_criados])
-                n_pacotes_criados += 1
+                fila_dados.append(chegadas[n_pacotes_dados_criados-1])
+                # n_pacotes_dados_criados += 1
                 fim_fila_dados += 1
                 n_fila_dados += 1
                 # Para gerar a estatistica de E[W1], precisamos anotar o tempo em que esse pacote entrou na fila separadamente
@@ -403,6 +400,10 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
                 # Oficialmente, um pacote de dados acaba de entrar na fila de dados.
                 printa_fila(t, 20, n_fila_dados, n_servidor, "DADOS - fila")
                 printa_numeros(inicio_fila_dados, fim_fila_dados, n_fila_dados, inicio_fila_voz, fim_fila_voz, n_fila_voz)
+            # Gera a chegada do proximo pacote de dados
+            chegadas.append(pacote_dados())
+            n_pacotes_dados_criados += 1
+            chegadas[n_pacotes_dados_criados-1].tempo_chegada = t + gera_chegada_pacote_dados(lamb1)
 
         # Se o proximo evento eh o termino de um servico
         elif proximos_eventos[indice_prox_evento][1] == "servico":
@@ -473,10 +474,10 @@ def simulacao(total_pacotes_dados, n_pacotes_fase_transiente):
 
     # Fim - while
     # Termina de calcular os nossos E[T1k], E[T2k], E[X1k], E[W1k], E[Nq1k], E[Nq2k], E[deltak] e V[deltak]
-    estatisticas["E[T1k]"] = estatisticas["E[T1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
+    estatisticas["E[T1k]"] = estatisticas["E[T1k]"] / (n_pacotes_dados_criados - n_pacotes_fase_transiente)
     estatisticas["E[T2k]"] = estatisticas["E[T2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
-    estatisticas["E[X1k]"] = estatisticas["E[X1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
-    estatisticas["E[W1k]"] = estatisticas["E[W1k]"] / (n_pacotes_criados - n_pacotes_fase_transiente)
+    estatisticas["E[X1k]"] = estatisticas["E[X1k]"] / (n_pacotes_dados_criados - n_pacotes_fase_transiente)
+    estatisticas["E[W1k]"] = estatisticas["E[W1k]"] / (n_pacotes_dados_criados - n_pacotes_fase_transiente)
     estatisticas["E[W2k]"] = estatisticas["E[W2k]"] / n_pacotes_voz_criados_fora_da_fase_transiente
     estatisticas["E[Nq1k]"] = estatisticas["E[Nq1k]"] / t
     estatisticas["E[Nq2k]"] = estatisticas["E[Nq2k]"] / t
