@@ -7,9 +7,9 @@ import math
 # Declaracao de variaveis globais
 # ********************************************************************
 
-preempcao = False
+preempcao = True
 numero_rodadas = 5
-numero_fregueses = 1000
+numero_fregueses = 5000
 modo_debug = False
 
 # Recebe ro e E[X]
@@ -318,7 +318,7 @@ def simulacao(total_pacotes_dados):
         canais[i].tempo_prox_chegada = calcula_duracao_periodo_silencio_voz()
 
     # Enquanto ainda ha pacotes de dados para chegar ou pacotes de qualquer tipo para servir
-    while n_pacotes_dados_criados_fora_fase_transiente < total_pacotes_dados or n_servidor > 0 or n_fila_dados > 0 or n_fila_voz > 0:
+    while n_pacotes_dados_criados_fora_fase_transiente < total_pacotes_dados:
         # Descobre qual eh o proximo evento que deve ser tratado
         # Se o menor tempo eh o termino do servico de algum pacote do servidor, ou o tempo de alguma chegada
         tempo_prox_evento, proximos_eventos, indice_prox_evento = descobre_proximo_evento(n_canais, canais, n_pacotes_dados_criados, n_pacotes_dados_criados_fora_fase_transiente, total_pacotes_dados, chegadas, n_servidor, servidor)
