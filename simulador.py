@@ -2,6 +2,7 @@ import random as rd
 import numpy.random
 from scipy import stats
 import math
+import sys
 
 # ********************************************************************
 # Declaracao de variaveis globais
@@ -25,7 +26,7 @@ EX1 = (EL*8)/float(2097152)
 
 # ro1, utilizacao do sistema levando em conta apenas os pacotes de dados
 # ro1 = lambda1 * E[X1] -- ver descricao do trabalho
-ro1 = 0.7
+ro1 = 0.1
 
 # lambda1, taxa de chegada dos pacotes de dados
 lamb1 = calcula_lambda(ro1, EX1)
@@ -42,6 +43,66 @@ media_periodo_silencio = 0.650
 # Intervalo de tempo entre as chegadas de pacotes de voz num periodo de atividade
 intervalo_entre_pacotes_voz = 0.016
 
+# ********************************************************************
+# Captura dos parametros de execucao
+# ********************************************************************
+
+def printa_uso():
+    print "Uso:\t<nome_programa> [-p | --preemptivo] [-f <minimo-de-fregueses>] [-r <minimo-de-rodadas>] [-u <utilizacao-do-sistema>]"
+    print "Detalhes:"
+    print "\t-p --preemptivo\t\t\t executa simulacao com disciplina preemptiva"
+    print "\t-f <minimo-de-fregueses>\t numero minimo de pacotes de dados em cada rodada"
+    print "\t-r <minimo-de-rodadas>\t\t numero minimo de rodadas"
+    print "\t-u <utilizacao-do-sistema>\t utilizacao do sistema pelos pacotes de dados"
+    print "\t\t\t\t\t precisa ser um valor dentre os seguintes: (0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7)"
+    print "\t\t\t\t\t usar '.' para delimitar parte inteira da decimal"
+    print "Valor padrao para o minimo de fregueses: [" + str(numero_fregueses) + "]"
+    print "Valor padrao para o minimo de rodadas: [" + str(numero_rodadas) + "]"
+    print "Valor padrao para a utilizacao: [" + str(ro1) + "]"
+
+i = 1
+while i < len(sys.argv):
+    if sys.argv[i] == "-p" or sys.argv[i] == "--preemptivo" or sys.argv[i] == "--preempcao":
+        preempcao = True
+    elif i < len(sys.argv)-1 and sys.argv[i] == "-f":
+        try: numero_fregueses = int(sys.argv[i+1])
+        except ValueError:
+            printa_uso()
+            exit()
+        i += 1
+    elif i < len(sys.argv)-1 and sys.argv[i] == "-r":
+        try: numero_rodadas = int(sys.argv[i+1])
+        except ValueError:
+            printa_uso()
+            exit()
+        i += 1
+    elif i < len(sys.argv)-1 and sys.argv[i] == "-u":
+        aux = 0
+        try:
+            aux = float(sys.argv[i+1])
+        except ValueError:
+            printa_uso()
+            exit()
+        if aux not in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
+            printa_uso()
+            exit()
+        ro1 = aux
+        i += 1
+    else:
+        printa_uso()
+        exit()
+    i += 1
+
+# ********************************************************************
+# Validacao dos parametros de execucao
+# ********************************************************************
+
+if numero_rodadas < 1:
+    print "Erro: o numero de rodadas precisa ser maior do que 1"
+    exit()
+if numero_fregueses < 100:
+    print "Erro: o numero minimo de fregueses precisa ser maior ou igual a 100"
+    exit()
 
 # ********************************************************************
 # Funcoes dos pacotes de dados
