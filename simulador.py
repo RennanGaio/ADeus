@@ -7,7 +7,7 @@ import math
 # Declaracao de variaveis globais
 # ********************************************************************
 
-preempcao = True
+preempcao = False
 numero_rodadas = 5
 numero_fregueses = 5000
 modo_debug = False
@@ -227,17 +227,13 @@ def simulacao(total_pacotes_dados):
     t = 0
     # Tempo que ocorreu a ultima iteracao do simulador. Usado para calcular E[Nq1] e E[Nq2] pelo metodo das areas
     t_anterior = 0
-    # Numero de pacotes de dados ja criados. Usado para conhecer o progresso da rodada
+    # Numero de pacotes ja criados. Usado para conhecer o progresso da rodada
     n_pacotes_dados_criados = 1
-    # Numero total de pacotes de dados criados durante a fase transiente
     n_pacotes_dados_criados_fase_transiente = -1
-    # Numero de pacotes de dados criados fora da fase transiente
     n_pacotes_dados_criados_fora_fase_transiente = 0
-    # Numero total de pacotes de voz criados
     n_pacotes_voz_criados = 0
-    # Numero de pacotes de voz criados fora da fase transiente
-    n_pacotes_voz_criados_fora_da_fase_transiente = 0
     n_pacotes_voz_criados_fase_transiente = 0
+    n_pacotes_voz_criados_fora_da_fase_transiente = 0
     # Ponteiros para o inicio e fim das filas
     # As filas sao listas onde eu vou colocar os pacotes, mas nunca vou tirar
     # O ato de colocar um novo pacote na fila corresponde a concatenar o novo pacote a lista e a incrementar o indice de final da fila em 1
@@ -263,37 +259,13 @@ def simulacao(total_pacotes_dados):
     # Tempo de espera de um dado pacote de dados. Calculado durante a fase transiente.
     # Usado para estimar a fase transiente quando a disciplina usada eh a nao preemptiva
     tempo_espera_pacote_dados_atual = -1
-    # Variaveis usadas para calcular a media amostral e a variancia amostral do tempo de espera dos pacotes de dados
-    somatorio_tempos_espera_pacotes_dados = 0
-    somatorio_tempos_espera_quadrado_pacotes_dados = 0
+    # Variaveis usadas para calcular a media amostral do tempo de espera dos pacotes de dados
     media_tempos_espera_pacotes_dados = 0
-    primeiro_termo_variancia_tempos_espera_pacotes_dados = 0
-    segundo_termo_variancia_tempos_espera_pacotes_dados = 0
-    variancia_tempos_espera_pacotes_dados = 0
-    # Recolheremos 10 amostras da variancia do tempo de espera dos pacotes de dados
-    # Essas 10 amostras serao as 10 ultimas coletas da variancia
-    # Isso sera usado para avaliar a variacao do tempo de espera dos pacotes de dados, e, assim, estimar o fim da fase transiente
-    amostras_variancia_tempos_espera_pacotes_dados = []
-    n_amostras_variancia_tempos_espera_pacotes_dados = 0
-    n_max_amostras_variancia_tempos_espera_pacotes_dados = 10
-
     # Tempo de espera de um dado pacote de voz. Calculado durante a fase transiente.
     # Usado para estimar a fase transiente quando a disciplina usada eh a preemptiva
     tempo_espera_pacote_voz_atual = -1
     # Variaveis usadas para calcular a media amostral e a variancia amostral do tempo de espera dos pacotes de voz
-    somatorio_tempos_espera_pacotes_voz = 0
-    somatorio_tempos_espera_quadrado_pacotes_voz = 0
     media_tempos_espera_pacotes_voz = 0
-    primeiro_termo_variancia_tempos_espera_pacotes_voz = 0
-    segundo_termo_variancia_tempos_espera_pacotes_voz = 0
-    variancia_tempos_espera_pacotes_voz = 0
-    # Recolheremos 10 amostras da variancia do tempo de espera dos pacotes de voz
-    # Essas 10 amostras serao as 10 ultimas coletas da variancia
-    # Isso sera usado para avaliar a variacao do tempo de espera dos pacotes de voz, e, assim, estimar o fim da fase transiente
-    amostras_variancia_tempos_espera_pacotes_voz = []
-    n_amostras_variancia_tempos_espera_pacotes_voz = 0
-    n_max_amostras_variancia_tempos_espera_pacotes_voz = 10
-
     n_atual_amostras = 0
 
     # Insere na fila o primeiro pacote de dados
@@ -469,8 +441,8 @@ def simulacao(total_pacotes_dados):
                     # Atualiza o nosso E[T2k]
                     estatisticas["E[T2k]"] += (servidor[0].tempo_deixou_servico - servidor[0].tempo_chegada)
             # Se estiver na fase transiente, avalia a condicao para o seu termino
-            # Caso nao preemptivo: medir a variacao do tempo de espera dos pacotes de dados
-            # Caso preemptivo: medir a variacao do tempo de espera dos pacotes de voz
+            # Caso nao preemptivo: medir a media do tempo de espera dos pacotes de dados
+            # Caso preemptivo: medir a media do tempo de espera dos pacotes de voz
             if fase_transiente == True:
                 if preempcao == False and servidor[0].__class__ == pacote_dados:
                     tempo_espera_pacote_dados_atual = servidor[0].tempo_entrou_em_servico - servidor[0].tempo_chegada
@@ -479,41 +451,41 @@ def simulacao(total_pacotes_dados):
                     if n_atual_amostras == 100:
                         media_tempos_espera_pacotes_dados = media_tempos_espera_pacotes_dados / n_atual_amostras
                         if ro1 == 0.1:
-                            if media_tempos_espera_pacotes_voz < 0.0005:
+                            if media_tempos_espera_pacotes_dados < 0.0005:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.2:
-                            if media_tempos_espera_pacotes_voz < 0.0009:
+                            if media_tempos_espera_pacotes_dados < 0.0009:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.3:
-                            if media_tempos_espera_pacotes_voz < 0.0015:
+                            if media_tempos_espera_pacotes_dados < 0.0015:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.4:
-                            if media_tempos_espera_pacotes_voz < 0.0025:
+                            if media_tempos_espera_pacotes_dados < 0.0025:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.5:
-                            if media_tempos_espera_pacotes_voz < 0.0045:
+                            if media_tempos_espera_pacotes_dados < 0.0045:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.6:
-                            if media_tempos_espera_pacotes_voz < 0.007:
+                            if media_tempos_espera_pacotes_dados < 0.007:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.7:
-                            if media_tempos_espera_pacotes_voz < 0.013:
+                            if media_tempos_espera_pacotes_dados < 0.013:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
-                        media_tempos_espera_pacotes_voz = 0
+                        media_tempos_espera_pacotes_dados = 0
                         n_atual_amostras = 0
 
                 if preempcao == True and servidor[0].__class__ == pacote_voz:
