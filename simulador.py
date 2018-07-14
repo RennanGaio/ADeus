@@ -9,8 +9,8 @@ import sys
 # ********************************************************************
 
 preempcao = False
-numero_rodadas = 5
-numero_fregueses = 5000
+numero_rodadas = 50
+numero_fregueses = 1000
 modo_debug = False
 
 # Recebe ro e E[X]
