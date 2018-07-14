@@ -9,7 +9,7 @@ import sys
 # ********************************************************************
 
 preempcao = False
-numero_rodadas = 50
+numero_rodadas = 10
 numero_fregueses = 1000
 modo_debug = False
 
