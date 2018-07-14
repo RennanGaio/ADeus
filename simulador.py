@@ -3,6 +3,7 @@ import numpy.random
 from scipy import stats
 import math
 import sys
+import time
 
 # ********************************************************************
 # Declaracao de variaveis globais
@@ -12,6 +13,8 @@ preempcao = False
 numero_rodadas = 10
 numero_fregueses = 1000
 modo_debug = False
+
+start_time = time.time()
 
 # Recebe ro e E[X]
 # Retorna lambda tal que lambda = ro / E[X]
@@ -509,7 +512,7 @@ def simulacao(total_pacotes_dados):
                     tempo_espera_pacote_dados_atual = servidor[0].tempo_entrou_em_servico - servidor[0].tempo_chegada
                     media_tempos_espera_pacotes_dados += tempo_espera_pacote_dados_atual
                     n_atual_amostras += 1
-                    if n_atual_amostras == 1000:
+                    if n_atual_amostras == 100:
                         media_tempos_espera_pacotes_dados = media_tempos_espera_pacotes_dados / n_atual_amostras
                         if ro1 == 0.1:
                             if media_tempos_espera_pacotes_dados > 0.0003 and media_tempos_espera_pacotes_dados < 0.0005:
@@ -934,6 +937,8 @@ while termino == False:
 
         if numero_proporcoes_ok == len(chaves):
             print "#########################"
+            end_time = time.time() - start_time
+            print "Tempo de execucao: [" + str(end_time) + "] segundos."
             exit()
 
     i += 1
