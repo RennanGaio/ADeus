@@ -509,40 +509,40 @@ def simulacao(total_pacotes_dados):
                     tempo_espera_pacote_dados_atual = servidor[0].tempo_entrou_em_servico - servidor[0].tempo_chegada
                     media_tempos_espera_pacotes_dados += tempo_espera_pacote_dados_atual
                     n_atual_amostras += 1
-                    if n_atual_amostras == 100:
+                    if n_atual_amostras == 1000:
                         media_tempos_espera_pacotes_dados = media_tempos_espera_pacotes_dados / n_atual_amostras
                         if ro1 == 0.1:
-                            if media_tempos_espera_pacotes_dados < 0.0005:
+                            if media_tempos_espera_pacotes_dados > 0.0003 and media_tempos_espera_pacotes_dados < 0.0005:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.2:
-                            if media_tempos_espera_pacotes_dados < 0.0009:
+                            if media_tempos_espera_pacotes_dados > 0.0003 and media_tempos_espera_pacotes_dados < 0.0005:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.3:
-                            if media_tempos_espera_pacotes_dados < 0.0015:
+                            if media_tempos_espera_pacotes_dados > 0.0003 and media_tempos_espera_pacotes_dados < 0.0006:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.4:
-                            if media_tempos_espera_pacotes_dados < 0.0025:
+                            if media_tempos_espera_pacotes_dados > 0.0004 and media_tempos_espera_pacotes_dados < 0.0007:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.5:
-                            if media_tempos_espera_pacotes_dados < 0.0045:
+                            if media_tempos_espera_pacotes_dados > 0.0004 and media_tempos_espera_pacotes_dados < 0.0007:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.6:
-                            if media_tempos_espera_pacotes_dados < 0.007:
+                            if media_tempos_espera_pacotes_dados > 0.0004 and media_tempos_espera_pacotes_dados < 0.0007:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
                         elif ro1 == 0.7:
-                            if media_tempos_espera_pacotes_dados < 0.013:
+                            if media_tempos_espera_pacotes_dados > 0.0004 and media_tempos_espera_pacotes_dados < 0.0007:
                                 fase_transiente = False
                                 n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                                 n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
@@ -555,7 +555,8 @@ def simulacao(total_pacotes_dados):
                     n_atual_amostras += 1
                     if n_atual_amostras == 100:
                         media_tempos_espera_pacotes_voz = media_tempos_espera_pacotes_voz / n_atual_amostras
-                        if media_tempos_espera_pacotes_voz < 10**(-5):
+                        # print "Media dos 100 ultimos pacotes de voz: [" + str(media_tempos_espera_pacotes_voz) + "]"
+                        if media_tempos_espera_pacotes_voz > 10**(-6) and media_tempos_espera_pacotes_voz < 10**(-5):
                             fase_transiente = False
                             n_pacotes_dados_criados_fase_transiente = n_pacotes_dados_criados
                             n_pacotes_voz_criados_fase_transiente = n_pacotes_voz_criados
