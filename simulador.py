@@ -107,6 +107,12 @@ if numero_fregueses < 100:
     print "Erro: o numero minimo de fregueses precisa ser maior ou igual a 100"
     exit()
 
+print "Inicio execucao"
+print "###########################################"
+print "Utilizacao: " + str(ro1) + "]"
+print "Preempcao: " + str(preempcao) + "]"
+print "###########################################"
+
 # ********************************************************************
 # Funcoes dos pacotes de dados
 # ********************************************************************
